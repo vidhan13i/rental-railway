@@ -4,7 +4,8 @@ import requests
 import os
 
 app = Flask(__name__)
-CORS(app)
+
+CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 
 # Services (NO docker defaults now)
 SERVICES = {
