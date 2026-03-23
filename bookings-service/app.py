@@ -27,7 +27,7 @@ db = SQLAlchemy(app)
 
 # ---------------- JWT ----------------
 
-app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET", "dev-secret")
+app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET")
 jwt = JWTManager(app)
 
 # ---------------- SERVICE URLS ----------------
