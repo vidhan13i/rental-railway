@@ -25,7 +25,7 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 # -------------------------
 # JWT CONFIG
 # -------------------------
-app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET", "super-secret-key")
+app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET")
 
 # -------------------------
 # INIT EXTENSIONS
