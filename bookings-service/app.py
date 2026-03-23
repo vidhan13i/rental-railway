@@ -128,6 +128,22 @@ def get_bookings():
 def health():
     return jsonify({'service': 'bookings', 'status': 'healthy'})
     
+@app.route('/bookings/<int:id>/cancel', methods=['POST'])
+@jwt_required()
+def cancel_booking(id):
+    user_id = int(get_jwt_identity())
+
+    booking = Booking.query.get_or_404(id)
+
+    # ✅ Ensure user owns booking
+    if booking.tenant_id != user_id:
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    booking.status = 'cancelled'
+    db.session.commit()
+
+    return jsonify({'message': 'Booking cancelled successfully'})   
+    
 
 # ---------------- INIT DB ----------------
 
