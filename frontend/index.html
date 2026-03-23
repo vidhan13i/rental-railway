@@ -678,7 +678,7 @@
 </div>
 
 <script>
-const API = 'https://api-gateway-production-a677.up.railway.app/';
+const API = 'https://api-gateway-production-a677.up.railway.app';
 let token = localStorage.getItem('token');
 let currentUser = JSON.parse(localStorage.getItem('user') || 'null');
 let selectedProperty = null;
@@ -694,15 +694,29 @@ function toast(msg, type = 'success') {
 // ── API HELPER ─────────────────────────────────
 async function api(path, method = 'GET', body = null) {
   const headers = { 'Content-Type': 'application/json' };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-  const res = await fetch(API + path, {
-    method, headers,
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const res = await fetch(`${API}${path}`, {
+    method,
+    headers,
     body: body ? JSON.stringify(body) : null
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Something went wrong');
+
+  let data = {};
+  try {
+    data = await res.json();
+  } catch {}
+
+  if (!res.ok) {
+    throw new Error(data.error || data.msg || 'Request failed');
+  }
+
   return data;
 }
+
 
 // ── NAVIGATION ─────────────────────────────────
 function showPage(page) {
@@ -775,7 +789,7 @@ async function login() {
       email: document.getElementById('login-email').value,
       password: document.getElementById('login-password').value
     });
-    token = data.token;
+    token = data.access_token || data.token;
     currentUser = data.user;
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(currentUser));
