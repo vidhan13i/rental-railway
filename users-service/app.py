@@ -23,7 +23,7 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)
 
-app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET', 'dev-secret')
+app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET')
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=24)
 
 
