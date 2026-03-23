@@ -8,11 +8,23 @@ import requests
 app = Flask(__name__)
 CORS(app)
 
-db = os.getenv("DATABASE_URL")
+from flask_sqlalchemy import SQLAlchemy
+import os
 
-if db and db.startswith("postgres://"):
-    db = db.replace("postgres://", "postgresql://", 1)
-app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET', 'dev-secret')
+app = Flask(__name__)
+
+# ✅ Get DB URL
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+# Fix postgres:// → postgresql://
+if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+# ✅ THIS is your DB object
+db = SQLAlchemy(app)
 
 
 jwt = JWTManager(app)
