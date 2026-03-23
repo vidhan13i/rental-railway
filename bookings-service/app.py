@@ -119,7 +119,7 @@ def create_booking():
 
     return jsonify({'booking': booking.to_dict()}), 201
 
-@app.route('/bookings', methods=['GET'])
+@app.route('/bookings/my', methods=['GET'])
 def get_bookings():
     bookings = Booking.query.all()
     return jsonify({'bookings': [b.to_dict() for b in bookings]})
@@ -127,6 +127,7 @@ def get_bookings():
 @app.route('/health')
 def health():
     return jsonify({'service': 'bookings', 'status': 'healthy'})
+    
 
 # ---------------- INIT DB ----------------
 
