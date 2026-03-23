@@ -5,9 +5,25 @@ import os
 
 app = Flask(__name__)
 
-CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
+# ✅ CORS FIX (GLOBAL)
+CORS(app, supports_credentials=True)
 
-# Services (NO docker defaults now)
+@app.after_request
+def after_request(response):
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, PATCH, OPTIONS'
+    return response
+
+
+# ✅ HANDLE ALL PREFLIGHT REQUESTS
+@app.route('/', defaults={'path': ''}, methods=['OPTIONS'])
+@app.route('/<path:path>', methods=['OPTIONS'])
+def options_handler(path):
+    return '', 200
+
+
+# ✅ SERVICES (NO DEFAULT FALLBACK)
 SERVICES = {
     'users': os.getenv('USERS_SERVICE_URL'),
     'listings': os.getenv('LISTINGS_SERVICE_URL'),
@@ -17,18 +33,24 @@ SERVICES = {
 }
 
 
+# 🚀 PROXY FUNCTION
 def proxy(service_name, path):
     service_url = SERVICES.get(service_name)
 
     if not service_url:
         return jsonify({'error': f'{service_name} URL not configured'}), 500
 
-    target_url = f'{service_url}{path}'
+    target_url = f"{service_url}{path}"
 
     if request.query_string:
-        target_url += f'?{request.query_string.decode()}'
+        target_url += f"?{request.query_string.decode()}"
 
-    headers = {key: value for key, value in request.headers if key.lower() != 'host'}
+    # ✅ SAFE HEADERS
+    headers = {
+        key: value
+        for key, value in request.headers
+        if key.lower() not in ['host', 'content-length']
+    }
 
     try:
         resp = requests.request(
@@ -42,7 +64,7 @@ def proxy(service_name, path):
         return Response(
             resp.content,
             status=resp.status_code,
-            content_type=resp.headers.get('Content-Type')
+            content_type=resp.headers.get('Content-Type', 'application/json')
         )
 
     except requests.exceptions.ConnectionError:
@@ -52,39 +74,55 @@ def proxy(service_name, path):
         return jsonify({'error': f'{service_name} service timed out'}), 504
 
 
-# USERS ROUTES (fixed)
-@app.route('/users', methods=['GET', 'POST'])
-@app.route('/users/<path:path>', methods=['GET', 'POST', 'PUT', 'DELETE', 'PATCH'])
+# ===================== ROUTES ===================== #
+
+# USERS
+@app.route('/users', methods=['GET', 'POST', 'OPTIONS'])
+@app.route('/users/<path:path>', methods=['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'])
 def users_routes(path=''):
+    if request.method == 'OPTIONS':
+        return '', 200
     return proxy('users', f'/users/{path}' if path else '/users')
 
 
-# OTHER SERVICES (keep but won’t work until deployed)
-@app.route('/listings', methods=['GET', 'POST'])
-@app.route('/listings/<path:path>', methods=['GET', 'POST', 'PUT', 'DELETE', 'PATCH'])
+# LISTINGS
+@app.route('/listings', methods=['GET', 'POST', 'OPTIONS'])
+@app.route('/listings/<path:path>', methods=['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'])
 def listings_routes(path=''):
+    if request.method == 'OPTIONS':
+        return '', 200
     return proxy('listings', f'/listings/{path}' if path else '/listings')
 
 
-@app.route('/bookings', methods=['GET', 'POST'])
-@app.route('/bookings/<path:path>', methods=['GET', 'POST', 'PUT', 'DELETE', 'PATCH'])
+# BOOKINGS
+@app.route('/bookings', methods=['GET', 'POST', 'OPTIONS'])
+@app.route('/bookings/<path:path>', methods=['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'])
 def bookings_routes(path=''):
+    if request.method == 'OPTIONS':
+        return '', 200
     return proxy('bookings', f'/bookings/{path}' if path else '/bookings')
 
 
-@app.route('/payments', methods=['GET', 'POST'])
-@app.route('/payments/<path:path>', methods=['GET', 'POST', 'PUT', 'DELETE', 'PATCH'])
+# PAYMENTS (optional)
+@app.route('/payments', methods=['GET', 'POST', 'OPTIONS'])
+@app.route('/payments/<path:path>', methods=['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'])
 def payments_routes(path=''):
+    if request.method == 'OPTIONS':
+        return '', 200
     return proxy('payments', f'/payments/{path}' if path else '/payments')
 
 
-@app.route('/reviews', methods=['GET', 'POST'])
-@app.route('/reviews/<path:path>', methods=['GET', 'POST', 'PUT', 'DELETE', 'PATCH'])
+# REVIEWS (optional)
+@app.route('/reviews', methods=['GET', 'POST', 'OPTIONS'])
+@app.route('/reviews/<path:path>', methods=['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'])
 def reviews_routes(path=''):
+    if request.method == 'OPTIONS':
+        return '', 200
     return proxy('reviews', f'/reviews/{path}' if path else '/reviews')
 
 
-# HEALTH CHECK
+# ===================== HEALTH ===================== #
+
 @app.route('/health')
 def health():
     results = {}
@@ -109,13 +147,14 @@ def health():
     })
 
 
-# ROOT ROUTE (for testing)
+# ROOT
 @app.route('/')
 def home():
     return {"message": "API Gateway running"}
 
 
-# IMPORTANT: Railway PORT fix
+# ===================== RUN ===================== #
+
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 8000))
     app.run(host='0.0.0.0', port=port)
